@@ -1,0 +1,12 @@
+{
+  "name": "monorepo",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "ingestion-service",
+    "rule-engine",
+    "dispatcher",
+    "workers",
+    "infra"
+  ]
+}
