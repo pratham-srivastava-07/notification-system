@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { EventInputSchema, EventInput, EnrichedEvent } from "@notify/shared";
 import { randomUUID } from "crypto";
+import { producer } from "../kafka/producer";
 
 export default async function mainController(
   req: Request,
@@ -19,6 +20,16 @@ export default async function mainController(
     };
 
     //kafka-impl here
+
+    await producer.send({
+      topic: "events.ingested",
+      messages: [
+        {
+          key: enrichedEvent.tenant_id,
+          value: JSON.stringify(enrichedEvent)
+        }
+      ]
+    })
 
     return res.status(202).json({
       status: "accepted",
