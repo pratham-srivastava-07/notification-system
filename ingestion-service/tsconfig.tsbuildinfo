@@ -1,0 +1,1 @@
+{"root":["./src/index.ts","./src/config/env.ts","./src/controllers/index.ts","./src/kafka/client.ts","./src/kafka/producer.ts","./src/middlewares/auth.ts","./src/routes/index.ts","./src/services/index.ts","./src/types/express.d.ts"],"version":"5.9.3"}

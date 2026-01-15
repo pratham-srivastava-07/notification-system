@@ -8,28 +8,31 @@ export default async function mainController(
   res: Response
 ) {
   try {
+    if (!req.context?.tenant_id) {
+      return res.status(401).json({
+        error: "Unauthorized"
+      });
+    }
+
     const parsedBody: EventInput = EventInputSchema.parse(req.body);
 
-    
     const enrichedEvent: EnrichedEvent = {
       event_id: randomUUID(),
-      tenant_id: req.context?.tenant_id,
+      tenant_id: req.context.tenant_id,
       event_type: parsedBody.event_type,
       payload: parsedBody.payload,
       occurred_at: new Date().toISOString()
     };
 
-    //kafka-impl here
-
     await producer.send({
       topic: "events.ingested",
       messages: [
         {
-          key: enrichedEvent.tenant_id,
+          key: String(enrichedEvent.tenant_id),
           value: JSON.stringify(enrichedEvent)
         }
       ]
-    })
+    });
 
     return res.status(202).json({
       status: "accepted",

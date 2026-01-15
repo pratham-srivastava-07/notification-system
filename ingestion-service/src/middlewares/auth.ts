@@ -11,7 +11,8 @@ const TENANTS = [
 
 export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
     try {
-        const apiKey = req.header("x-api-key");
+        console.log("REQUEST HEADERS", req.headers)
+        const apiKey = req.headers["x-api-key"];
 
         if(!apiKey) {
             return res.status(401).json({
@@ -19,7 +20,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
             })
         }
 
-        const tenant_id = TENANTS.find(t => t.id === apiKey);
+        const tenant_id = TENANTS.find(t => t.apiKey === apiKey);
 
         if(!tenant_id) {
             return res.status(401).json({
