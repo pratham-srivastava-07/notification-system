@@ -6,26 +6,24 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig* ./
 
-# Copy all workspaces (simplest for monorepo resolution)
+# Copy all workspaces
 COPY . .
 
 # Install and build
 RUN npm install
 RUN npm run build -w shared
-RUN npm run build -w ingestion-service
+RUN npm run build -w workers
 
 # Production runner
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Copy dependencies and built artifacts
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/shared ./shared
-COPY --from=builder /app/ingestion-service ./ingestion-service
+COPY --from=builder /app/workers ./workers
 
-# Set common env vars if needed or just rely on docker-compose
 ENV NODE_ENV=production
 
-CMD ["npm", "start", "-w", "ingestion-service"]
+CMD ["npm", "start", "-w", "workers"]

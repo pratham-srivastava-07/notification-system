@@ -3,11 +3,19 @@
     "outDir": "dist",
     "rootDir": "src",
     "module": "CommonJS",
-    "target": "ES2020",         // Update target to ES2020 or later
-    "lib": ["es2020"],          // Add ES2020 to lib to ensure BigInt is available
+    "target": "ES2020", // Update target to ES2020 or later
+    "lib": [
+      "es2020"
+    ], // Add ES2020 to lib to ensure BigInt is available
     "declaration": true,
     "esModuleInterop": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "skipLibCheck": true,
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*"
+  ]
 }

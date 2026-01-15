@@ -1,4 +1,5 @@
 import { Kafka } from "kafkajs";
+import { evaluateRules } from "./rules/rule.engine";
 
 const kafka = new Kafka({
   clientId: "event-worker",
@@ -23,6 +24,10 @@ export async function startConsumer() {
       if (!message.value) return;
 
       const event = JSON.parse(message.value.toString());
+
+      const channels = evaluateRules(event)
+
+      console.log("Channels", channels)
 
       // TEMP processing
       console.log("Processing event:", event);
