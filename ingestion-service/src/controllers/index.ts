@@ -12,7 +12,7 @@ export default async function mainController(
     
     const enrichedEvent: EnrichedEvent = {
       event_id: randomUUID(),
-      tenant_id: "00000000-0000",
+      tenant_id: req.context?.tenant_id,
       event_type: parsedBody.event_type,
       payload: parsedBody.payload,
       occurred_at: new Date().toISOString()
