@@ -4,6 +4,7 @@ import { useState } from "react"
 import { NotificationForm } from "@/components/dashboard/notification-form"
 import { NotificationList, type NotificationLog } from "@/components/dashboard/notification-list"
 import { AnalyticsCards } from "@/components/dashboard/analytics-cards"
+import { API_BASE_URL } from "@/constants/env"
 
 export default function DashboardPage() {
   const [logs, setLogs] = useState<NotificationLog[]>([])
@@ -29,7 +30,7 @@ export default function DashboardPage() {
     try {
       const parsedPayload = JSON.parse(payload)
 
-      const response = await fetch("http://localhost:5000/v1/events", {
+      const response = await fetch(`${API_BASE_URL}/v1/events`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-API-Key": "test-api-key-123" },
         body: JSON.stringify({
