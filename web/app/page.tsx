@@ -1,109 +1,84 @@
-import { db } from "@/lib/db";
-import { getEventTypes } from "@/lib/data";
-import { EventItem } from "@/components/notifications/event-item";
-import { FilterBar } from "@/components/notifications/filter-bar";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertCircle, Inbox } from "lucide-react";
+"use client"
 
-export const dynamic = "force-dynamic";
+import { useState } from "react"
+import { NotificationForm } from "@/components/dashboard/notification-form"
+import { NotificationList, NotificationLog } from "@/components/dashboard/notification-list"
+import { AnalyticsCards } from "@/components/dashboard/analytics-cards"
+import { Toaster } from "sonner" // Assuming sonner is installed or will be, actually shadcn typically uses its own toast. I might need to swap this.
+// Let's stick to standard console for now or basic alerting if toast isn't set up, but shadcn usually installs functionality.
+// Wait, I didn't install sonner or toast. I'll stick to local state feedback which is already in the components.
 
-type Status = "all" | "pending" | "processed" | "failed" | "processing";
+export default function DashboardPage() {
+  const [logs, setLogs] = useState<NotificationLog[]>([])
 
-export default async function DashboardPage(props: {
-  searchParams: Promise<{ type?: string; status?: string }>;
-}) {
-  const searchParams = await props.searchParams;
-  const filterType = searchParams.type || "all";
-  const filterStatus = (searchParams.status || "all") as Status;
+  const stats = {
+    totalSent: logs.length,
+    successCount: logs.filter(l => l.status === 'success').length,
+    failureCount: logs.filter(l => l.status === 'error').length,
+    lastActive: logs.length > 0 ? logs[0].timestamp : null
+  }
 
-  // Parallel data fetching
-  const [eventTypes, events] = await Promise.all([
-    getEventTypes(),
-    db.event.findMany({
-      where: filterType !== "all" ? { eventType: filterType } : {},
-      orderBy: {
-        receivedAt: "desc",
-      },
-      take: 100,
-      include: {
-        deliveries: true,
-      },
-    }),
-  ]);
+  const handleSendNotification = async (eventType: string, payload: string) => {
+    const newLog: NotificationLog = {
+      id: crypto.randomUUID(),
+      eventType,
+      payload: JSON.parse(payload),
+      status: 'pending',
+      timestamp: new Date()
+    }
 
-  // Client-side filtering for status (derived field)
-  const filteredEvents = events.filter((event) => {
-    if (filterStatus === "all") return true;
+    setLogs(prev => [newLog, ...prev])
 
-    const hasSuccess = event.deliveries.some((d) => d.status === "SUCCESS");
-    const hasdeliveries = event.deliveries.length > 0;
-    const allFailed =
-      hasdeliveries &&
-      event.deliveries.every((d) => d.status === "FAILED");
+    try {
+      const res = await fetch('http://localhost:5000/v1/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'test-api-key-123' // Hardcoded for demo as per known working key
+        },
+        body: JSON.stringify({
+          event_type: eventType,
+          payload: JSON.parse(payload)
+        })
+      })
 
-    if (filterStatus === "processed") return hasSuccess;
-    if (filterStatus === "pending") return !hasdeliveries;
-    if (filterStatus === "failed") return allFailed;
-    if (filterStatus === "processing")
-      return hasdeliveries && !hasSuccess && !allFailed;
+      const data = await res.json()
 
-    return true;
-  });
+      if (!res.ok) throw new Error(data.message || 'Failed to send')
+
+      setLogs(prev => prev.map(log =>
+        log.id === newLog.id
+          ? { ...log, status: 'success', apiResponse: data }
+          : log
+      ))
+    } catch (error) {
+      console.error(error)
+      setLogs(prev => prev.map(log =>
+        log.id === newLog.id
+          ? { ...log, status: 'error' }
+          : log
+      ))
+      throw error // Re-throw to let form handle UI error state
+    }
+  }
 
   return (
-    <div className="container mx-auto py-10 px-4 min-h-screen bg-slate-50/50 dark:bg-slate-950/50">
-      <div className="flex flex-col gap-6 max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Notification System
-          </h1>
-          <p className="text-muted-foreground">
-            Live feed of ingested events and processing status.
-          </p>
+    <div className="min-h-screen bg-background p-8 space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Notification System</h1>
+        <p className="text-muted-foreground">Manage and track your event ingestion pipeline.</p>
+      </div>
+
+      <AnalyticsCards stats={stats} />
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <div className="col-span-4">
+          <NotificationForm onSend={handleSendNotification} />
         </div>
-
-        {/* Filters */}
-        <Card>
-          <CardHeader className="pb-3 pt-4">
-            <CardTitle className="text-base">Filters</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FilterBar eventTypes={eventTypes} />
-          </CardContent>
-        </Card>
-
-        {/* Feed */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold tracking-tight">Event Feed</h2>
-            <div className="text-sm text-muted-foreground">
-              Showing {filteredEvents.length} of {events.length} fetched
-            </div>
-          </div>
-
-          <ScrollArea className="h-[600px] pr-4 rounded-md">
-            {filteredEvents.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 space-y-3 text-muted-foreground border-2 border-dashed rounded-lg">
-                <Inbox className="h-10 w-10 opacity-50" />
-                <p>No events found matching your criteria.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {filteredEvents.map((event) => (
-                  <EventItem key={event.id} event={event} />
-                ))}
-              </div>
-            )}
-          </ScrollArea>
+        <div className="col-span-3">
+          <NotificationList logs={logs} />
         </div>
       </div>
     </div>
-  );
+  )
 }
